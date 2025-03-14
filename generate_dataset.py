@@ -1,33 +1,13 @@
-import os
 import random
 import json
 from pathlib import Path
 from tqdm import tqdm
 
 # Import our modules
-from prompts import generate_diverse_face_prompts, generate_filename
-from run import generate_flux_images
+from src.prompts import generate_diverse_face_prompts, generate_filename
+from src.flux_funcs import generate_flux_images
 
-# Default configuration
-CONFIG = {
-    # Dataset parameters
-    "num_faces": 500,
-    "output_dir": "outputs",
-    "save_metadata": True,
-    # Model parameters
-    "model_path": "black-forest-labs/FLUX.1-schnell",
-    # Image parameters
-    "height": 1024,
-    "width": 1024,
-    # Generation parameters
-    "seed": None,  # Random seed (None for random seeds)
-    "num_inference_steps": 4,
-    "guidance_scale": 3.5,
-    # Performance options
-    "enable_cpu_offload": True,
-    "enable_vae_slicing": False,
-    "enable_vae_tiling": True,
-}
+from src.config import GENERATE_DATASET_CONFIG as CONFIG
 
 if __name__ == "__main__":
     # Create output directory
@@ -37,7 +17,7 @@ if __name__ == "__main__":
     # Generate diverse face prompts
     print(f"Generating {CONFIG['num_faces']} diverse face prompts...")
     prompts, metadata_list = generate_diverse_face_prompts(
-        CONFIG["num_faces"], ensure_diversity=True
+        CONFIG["num_faces"], ensure_diversity=False
     )
 
     # Set up seed if provided

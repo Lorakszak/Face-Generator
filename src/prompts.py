@@ -3,23 +3,14 @@ import os
 import uuid
 
 # Define the standardized regions
-REGIONS = [
-    "African",
-    "Anglo-Saxon",
-    "Central_Asian",
-    "Eastern_Asian",
-    "European",
-    "Far_Eastern",
-    "Latin_Hispanic",
-    "Middle_Eastern",
-]
+from src.config import REGIONS, DISTINCTIVE_FEATURES, ACCESSORIES
 
 
 def generate_face_prompt(
     gender=None,
     age_group=None,
     ethnicity_region=None,
-    image_type="portrait photograph",
+    image_type="head-and-shoulders portrait photograph",
     style="sharp and detailed high quality professional photography",
     background="plain background",
     lighting="natural lighting",
@@ -62,7 +53,7 @@ def generate_face_prompt(
         "child": (5, 14),
         "young_adult": (15, 30),
         "adult": (30, 40),
-        "middle_aged": (40, 55),
+        "middle_aged": (40, 50),
         "senior": (60, 90),  # Max age set to 90
     }
 
@@ -84,12 +75,19 @@ def generate_face_prompt(
 
     if age_group is None:
         # Apply the distribution: 20% children, 80% adults
-        # For adults: distribute among young adults, adults, middle-aged, and seniors
         if random.random() < 0.2:  # 20% chance for children
             age_group = "child"
         else:
-            adult_groups = ["young_adult", "adult", "middle_aged", "senior"]
-            age_group = random.choice(adult_groups)
+            # For adults: 60% young adults and adults (30% each), 20% middle-aged, 20% seniors
+            adult_distribution = random.random()
+            if adult_distribution < 0.3:  # 30% young adults
+                age_group = "young_adult"
+            elif adult_distribution < 0.6:  # 30% adults
+                age_group = "adult"
+            elif adult_distribution < 0.8:  # 20% middle-aged
+                age_group = "middle_aged"
+            else:  # 20% seniors
+                age_group = "senior"
 
     if ethnicity_region is None:
         # Randomly select an ethnicity region
@@ -111,18 +109,29 @@ def generate_face_prompt(
     else:  # senior
         age_description = f"senior ({specific_age} years old)"
 
-    # Build the prompt
-    prompt_parts = [
-        f"{image_type} of a {gender}",
-        age_description,
-        f"with {ethnicity_features[ethnicity_region]}",
-        background,
-        lighting,
-        expression,
-        style,
-    ]
+    # Determine distinctive features (85% chance to be empty)
+    distinctive_features = ""
+    if random.random() < 0.15:  # 15% chance to include
+        distinctive_features = random.choice(DISTINCTIVE_FEATURES)
 
-    prompt = ", ".join(prompt_parts)
+    # Determine accessories (85% chance to be empty)
+    accessories = ""
+    if random.random() < 0.15:  # 15% chance to include
+        accessories = random.choice(ACCESSORIES)
+
+    # Build the prompt with the new template
+    prompt = f"{image_type} of a {gender}, {age_description} with {ethnicity_features[ethnicity_region]}, {style}"
+
+    # Add distinctive features if present
+    if distinctive_features:
+        prompt += f", {distinctive_features}"
+
+    # Add accessories if present
+    if accessories:
+        prompt += f", {accessories}"
+
+    # Add remaining elements
+    prompt += f", {background}, {lighting}, {expression}"
 
     # Create metadata
     metadata = {
@@ -130,12 +139,16 @@ def generate_face_prompt(
         "age_group": age_group,
         "specific_age": specific_age,
         "ethnicity_region": ethnicity_region,
+        "distinctive_features": (
+            distinctive_features if distinctive_features else "none"
+        ),
+        "accessories": accessories if accessories else "none",
     }
 
     return prompt, metadata
 
 
-def generate_diverse_face_prompts(count, ensure_diversity=True):
+def generate_diverse_face_prompts(count, ensure_diversity=False):
     """
     Generate a diverse set of face prompts.
 
@@ -157,9 +170,6 @@ def generate_diverse_face_prompts(count, ensure_diversity=True):
     metadata_list = []
 
     if ensure_diversity and count >= 8:
-        # Ensure gender balance
-        genders = ["male", "female"]
-
         # Ensure age group distribution
         # 20% children (split between genders)
         # 80% adults (split between age groups and genders)
@@ -258,12 +268,12 @@ def generate_diverse_face_prompts(count, ensure_diversity=True):
 def generate_filename(metadata):
     """
     Generate a filename based on metadata following the structure:
-    <gender>_<region>_<random_id>.jpg
+    <gender>_<region>_<age>_<random_id>.png
 
     Parameters
     ----------
     metadata : dict
-        Metadata dictionary containing gender and ethnicity_region
+        Metadata dictionary containing gender, ethnicity_region, and specific_age
 
     Returns
     -------
@@ -273,26 +283,9 @@ def generate_filename(metadata):
     gender = metadata["gender"]
     # Convert region to lowercase and replace / with _
     region = metadata["ethnicity_region"].lower().replace("/", "_").replace("-", "_")
+    # Get the specific age if available, otherwise use age_group
+    age = str(metadata.get("specific_age", metadata["age_group"]))
     # Generate a random ID (using first 8 characters of a UUID)
     random_id = str(uuid.uuid4())[:8]
 
-    return f"{gender}_{region}_{random_id}.jpg"
-
-
-# Example usage
-if __name__ == "__main__":
-    # Generate a single face prompt
-    prompt, metadata = generate_face_prompt()
-    filename = generate_filename(metadata)
-    print(f"Single prompt: {prompt}")
-    print(f"Metadata: {metadata}")
-    print(f"Filename: {filename}")
-
-    # Generate 10 diverse face prompts
-    prompts, metadata_list = generate_diverse_face_prompts(10)
-    print("\nGenerated 10 diverse face prompts:")
-    for i, (prompt, metadata) in enumerate(zip(prompts, metadata_list)):
-        filename = generate_filename(metadata)
-        print(f"\n{i+1}. {prompt}")
-        print(f"   Metadata: {metadata}")
-        print(f"   Filename: {filename}")
+    return f"{gender}_{region}_{age}_{random_id}.png"
