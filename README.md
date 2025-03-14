@@ -1,5 +1,6 @@
 # Face-Generator
-Project serving the sole purpose of human face generation utilizing Flux-dev or Flux-schnell with focus on diversity when it comes to gender, age, ethnicity and so on.
+Project serving the sole purpose of human face generation, intended to use for generating synthetic faces for **World Memory Championship** Names&Faces discipline.
+Utilizes Flux-dev or Flux-schnell with focus on diversity when it comes to gender, age, ethnicity, distinctive features and accessories.
 
 
 ## Setup
