@@ -25,3 +25,4 @@ python generate_dataset.py
 - [x] Add setup.sh and requirements.txt for quick setup
 - [x] Fill in the README nicely and with more details
 - [x] Apply numpy style docstrings to the code
+- [x] Add the metadata for faces to not overwrite the existing ones & save after each successful face generation (not in bulk)

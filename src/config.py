@@ -8,7 +8,7 @@ It also contains the DEFAULT_FLUX_CONFIG as an example configuration for the Flu
 
 GENERATE_DATASET_CONFIG = {
     # Dataset parameters
-    "num_faces": 10,
+    "num_faces": 3,
     "output_dir": "outputs",
     "save_metadata": True,
     # Model parameters

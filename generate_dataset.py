@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 # Import our modules
 from src.prompts import generate_diverse_face_prompts, generate_filename
-from src.flux_funcs import generate_flux_images
+from src.flux_funcs import generate_flux_images, clear_flux_pipeline
 
 from src.config import GENERATE_DATASET_CONFIG as CONFIG
 
@@ -17,14 +17,29 @@ if __name__ == "__main__":
     # Generate diverse face prompts
     print(f"Generating {CONFIG['num_faces']} diverse face prompts...")
     prompts, metadata_list = generate_diverse_face_prompts(
-        CONFIG["num_faces"], ensure_diversity=False
+        CONFIG["num_faces"], ensure_diversity=True
     )
 
     # Set up seed if provided
     current_seed = CONFIG["seed"]
 
-    # Store results
-    results = []
+    # Track new faces count
+    new_faces_count = 0
+
+    # Metadata path
+    metadata_path = output_dir / "face_dataset_metadata.json"
+
+    # Load existing metadata if it exists
+    if metadata_path.exists() and CONFIG["save_metadata"]:
+        try:
+            with open(metadata_path, "r") as f:
+                existing_results = json.load(f)
+            print(f"Loaded {len(existing_results)} existing face metadata entries")
+        except Exception as e:
+            print(f"Error loading existing metadata: {e}")
+            existing_results = []
+    else:
+        existing_results = []
 
     # Generate images for each prompt
     for i, (prompt, metadata) in enumerate(
@@ -44,7 +59,7 @@ if __name__ == "__main__":
             current_seed += 1
 
         # Generate the filename
-        filename = generate_filename(metadata).replace(".jpg", "")
+        filename = generate_filename(metadata)
 
         # Configure Flux generation
         generation_config = {
@@ -56,7 +71,9 @@ if __name__ == "__main__":
             "num_inference_steps": CONFIG["num_inference_steps"],
             "seed": image_seed,
             "output_dir": str(output_dir),
-            "filename": filename,
+            "filename": filename.replace(
+                ".png", ""
+            ),  # Remove .png as it's added by generate_flux_images
             "enable_cpu_offload": CONFIG["enable_cpu_offload"],
             "enable_vae_slicing": CONFIG["enable_vae_slicing"],
             "enable_vae_tiling": CONFIG["enable_vae_tiling"],
@@ -66,29 +83,41 @@ if __name__ == "__main__":
         try:
             image_paths = generate_flux_images(**generation_config)
 
-            # Store result
+            # If image was generated successfully
             if image_paths:
+                # Create result entry
                 result = {
                     "path": image_paths[0],
                     "prompt": prompt,
                     "metadata": metadata,
                     "seed": image_seed,
                 }
-                results.append(result)
+
+                # Append to existing results
+                existing_results.append(result)
+
+                # Increment new faces count
+                new_faces_count += 1
+
+                # Save metadata after each successful generation
+                if CONFIG["save_metadata"]:
+                    with open(metadata_path, "w") as f:
+                        json.dump(existing_results, f, indent=2)
 
                 print(f"Image saved as: {image_paths[0]}")
+                print(f"Metadata updated ({len(existing_results)} total entries)")
+
         except Exception as e:
             print(f"Error generating image: {e}")
             continue
 
-    # Save metadata if requested
-    if CONFIG["save_metadata"] and results:
-        metadata_path = output_dir / "face_dataset_metadata.json"
-        with open(metadata_path, "w") as f:
-            json.dump(results, f, indent=2)
-        print(f"\nMetadata saved to {metadata_path}")
-
+    # Final summary
     print(
-        f"\nGenerated {len(results)} face images out of {CONFIG['num_faces']} requested"
+        f"\nGenerated {new_faces_count} new face images out of {CONFIG['num_faces']} requested"
     )
+    print(f"Total dataset size: {len(existing_results)} images")
     print(f"Images saved to {output_dir}")
+    print(f"Metadata saved to {metadata_path}")
+
+    # Clear the pipeline when done
+    clear_flux_pipeline()
