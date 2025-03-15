@@ -10,11 +10,19 @@ def generate_face_prompt(
     gender=None,
     age_group=None,
     ethnicity_region=None,
-    image_type="head-and-shoulders portrait photograph",
-    style="sharp and detailed high quality professional photography",
+    image_type="portrait photograph",
+    style="realistic, detailed, high quality, professional",
     background="plain background",
-    lighting="natural lighting",
-    expression="natural expression",
+    lighting="professional lighting",
+    expression="neutral expression",
+    distinctive_features_chance=0.15,
+    multiple_distinctive_features=False,
+    min_num_of_distinctive_features=1,
+    max_num_of_distinctive_features=3,
+    accessories_chance=0.15,
+    multiple_accessories=False,
+    min_num_of_accessories=1,
+    max_num_of_accessories=2,
 ):
     """
     Generate a prompt for diverse face generation.
@@ -37,6 +45,22 @@ def generate_face_prompt(
         Lighting description
     expression : str, optional
         Facial expression
+    distinctive_features_chance : float, optional
+        Chance (0.0-1.0) to include distinctive features
+    multiple_distinctive_features : bool, optional
+        Whether to allow multiple distinctive features
+    min_num_of_distinctive_features : int, optional
+        Minimum number of distinctive features if multiple is True
+    max_num_of_distinctive_features : int, optional
+        Maximum number of distinctive features if multiple is True
+    accessories_chance : float, optional
+        Chance (0.0-1.0) to include accessories
+    multiple_accessories : bool, optional
+        Whether to allow multiple accessories
+    min_num_of_accessories : int, optional
+        Minimum number of accessories if multiple is True
+    max_num_of_accessories : int, optional
+        Maximum number of accessories if multiple is True
 
     Returns
     -------
@@ -74,20 +98,19 @@ def generate_face_prompt(
         gender = random.choice(genders)
 
     if age_group is None:
-        # Apply the distribution: 20% children, 80% adults
-        if random.random() < 0.2:  # 20% chance for children
+        # Apply the distribution: child (15%), young adult (25%), adult (25%),
+        # middle_aged (20%), senior (15%)
+        random_value = random.random()
+        if random_value < 0.15:  # 15% chance for children
             age_group = "child"
-        else:
-            # For adults: 60% young adults and adults (30% each), 20% middle-aged, 20% seniors
-            adult_distribution = random.random()
-            if adult_distribution < 0.3:  # 30% young adults
-                age_group = "young_adult"
-            elif adult_distribution < 0.6:  # 30% adults
-                age_group = "adult"
-            elif adult_distribution < 0.8:  # 20% middle-aged
-                age_group = "middle_aged"
-            else:  # 20% seniors
-                age_group = "senior"
+        elif random_value < 0.40:  # 25% chance for young adults (0.15 + 0.25)
+            age_group = "young_adult"
+        elif random_value < 0.65:  # 25% chance for adults (0.40 + 0.25)
+            age_group = "adult"
+        elif random_value < 0.85:  # 20% chance for middle-aged (0.65 + 0.20)
+            age_group = "middle_aged"
+        else:  # 15% chance for seniors (remaining)
+            age_group = "senior"
 
     if ethnicity_region is None:
         # Randomly select an ethnicity region
@@ -109,26 +132,55 @@ def generate_face_prompt(
     else:  # senior
         age_description = f"senior ({specific_age} years old)"
 
-    # Determine distinctive features (85% chance to be empty)
-    distinctive_features = ""
-    if random.random() < 0.15:  # 15% chance to include
-        distinctive_features = random.choice(DISTINCTIVE_FEATURES)
+    # Determine distinctive features
+    selected_distinctive_features = []
+    if random.random() < distinctive_features_chance and DISTINCTIVE_FEATURES:
+        if (
+            multiple_distinctive_features
+            and len(DISTINCTIVE_FEATURES) >= min_num_of_distinctive_features
+        ):
+            # Choose a random number of features between min and max
+            num_features = min(
+                random.randint(
+                    min_num_of_distinctive_features, max_num_of_distinctive_features
+                ),
+                len(DISTINCTIVE_FEATURES),  # Can't select more than available
+            )
+            # Sample without replacement
+            selected_distinctive_features = random.sample(
+                DISTINCTIVE_FEATURES, num_features
+            )
+        else:
+            # Just choose one feature
+            selected_distinctive_features = [random.choice(DISTINCTIVE_FEATURES)]
 
-    # Determine accessories (85% chance to be empty)
-    accessories = ""
-    if random.random() < 0.15:  # 15% chance to include
-        accessories = random.choice(ACCESSORIES)
+    # Determine accessories
+    selected_accessories = []
+    if random.random() < accessories_chance and ACCESSORIES:
+        if multiple_accessories and len(ACCESSORIES) >= min_num_of_accessories:
+            # Choose a random number of accessories between min and max
+            num_accessories = min(
+                random.randint(min_num_of_accessories, max_num_of_accessories),
+                len(ACCESSORIES),  # Can't select more than available
+            )
+            # Sample without replacement
+            selected_accessories = random.sample(ACCESSORIES, num_accessories)
+        else:
+            # Just choose one accessory
+            selected_accessories = [random.choice(ACCESSORIES)]
 
     # Build the prompt with the new template
     prompt = f"{image_type} of a {gender}, {age_description} with {ethnicity_features[ethnicity_region]}, {style}"
 
     # Add distinctive features if present
-    if distinctive_features:
-        prompt += f", {distinctive_features}"
+    if selected_distinctive_features:
+        features_text = ", ".join(selected_distinctive_features)
+        prompt += f", {features_text}"
 
     # Add accessories if present
-    if accessories:
-        prompt += f", {accessories}"
+    if selected_accessories:
+        accessories_text = ", ".join(selected_accessories)
+        prompt += f", {accessories_text}"
 
     # Add remaining elements
     prompt += f", {background}, {lighting}, {expression}"
@@ -140,15 +192,26 @@ def generate_face_prompt(
         "specific_age": specific_age,
         "ethnicity_region": ethnicity_region,
         "distinctive_features": (
-            distinctive_features if distinctive_features else "none"
+            selected_distinctive_features if selected_distinctive_features else []
         ),
-        "accessories": accessories if accessories else "none",
+        "accessories": selected_accessories if selected_accessories else [],
     }
 
     return prompt, metadata
 
 
-def generate_diverse_face_prompts(count, ensure_diversity=False):
+def generate_diverse_face_prompts(
+    count,
+    ensure_diversity=True,
+    distinctive_features_chance=0.15,
+    multiple_distinctive_features=False,
+    min_num_of_distinctive_features=1,
+    max_num_of_distinctive_features=3,
+    accessories_chance=0.15,
+    multiple_accessories=False,
+    min_num_of_accessories=1,
+    max_num_of_accessories=2,
+):
     """
     Generate a diverse set of face prompts.
 
@@ -158,6 +221,22 @@ def generate_diverse_face_prompts(count, ensure_diversity=False):
         Number of prompts to generate
     ensure_diversity : bool, optional
         If True, ensures diversity across gender, age, and ethnicity
+    distinctive_features_chance : float, optional
+        Chance (0.0-1.0) to include distinctive features
+    multiple_distinctive_features : bool, optional
+        Whether to allow multiple distinctive features
+    min_num_of_distinctive_features : int, optional
+        Minimum number of distinctive features if multiple is True
+    max_num_of_distinctive_features : int, optional
+        Maximum number of distinctive features if multiple is True
+    accessories_chance : float, optional
+        Chance (0.0-1.0) to include accessories
+    multiple_accessories : bool, optional
+        Whether to allow multiple accessories
+    min_num_of_accessories : int, optional
+        Minimum number of accessories if multiple is True
+    max_num_of_accessories : int, optional
+        Maximum number of accessories if multiple is True
 
     Returns
     -------
@@ -175,9 +254,12 @@ def generate_diverse_face_prompts(count, ensure_diversity=False):
         # 80% adults (split between age groups and genders)
         child_count = max(1, int(count * 0.2))
         adult_count = count - child_count
-        young_adult_count = int(adult_count / 3)
-        middle_aged_count = int(adult_count / 3)
-        senior_count = adult_count - young_adult_count - middle_aged_count
+        young_adult_count = int(adult_count / 4)
+        adult_count_middle = int(adult_count / 4)
+        middle_aged_count = int(adult_count / 4)
+        senior_count = (
+            adult_count - young_adult_count - adult_count_middle - middle_aged_count
+        )
 
         # Create a distribution plan
         distribution = []
@@ -206,11 +288,26 @@ def generate_diverse_face_prompts(count, ensure_diversity=False):
                 }
             )
 
+        # Add adults
+        for i in range(adult_count_middle):
+            gender = "male" if i < adult_count_middle / 2 else "female"
+            ethnicity_region = REGIONS[
+                (i + child_count + young_adult_count) % len(REGIONS)
+            ]
+            distribution.append(
+                {
+                    "gender": gender,
+                    "age_group": "adult",
+                    "ethnicity_region": ethnicity_region,
+                }
+            )
+
         # Add middle-aged adults
         for i in range(middle_aged_count):
             gender = "male" if i < middle_aged_count / 2 else "female"
             ethnicity_region = REGIONS[
-                (i + child_count + young_adult_count) % len(REGIONS)
+                (i + child_count + young_adult_count + adult_count_middle)
+                % len(REGIONS)
             ]
             distribution.append(
                 {
@@ -224,7 +321,14 @@ def generate_diverse_face_prompts(count, ensure_diversity=False):
         for i in range(senior_count):
             gender = "male" if i < senior_count / 2 else "female"
             ethnicity_region = REGIONS[
-                (i + child_count + young_adult_count + middle_aged_count) % len(REGIONS)
+                (
+                    i
+                    + child_count
+                    + young_adult_count
+                    + adult_count_middle
+                    + middle_aged_count
+                )
+                % len(REGIONS)
             ]
             distribution.append(
                 {
@@ -244,7 +348,17 @@ def generate_diverse_face_prompts(count, ensure_diversity=False):
             ethnicity_region = item["ethnicity_region"]
 
             prompt, metadata = generate_face_prompt(
-                gender=gender, age_group=age_group, ethnicity_region=ethnicity_region
+                gender=gender,
+                age_group=age_group,
+                ethnicity_region=ethnicity_region,
+                distinctive_features_chance=distinctive_features_chance,
+                multiple_distinctive_features=multiple_distinctive_features,
+                min_num_of_distinctive_features=min_num_of_distinctive_features,
+                max_num_of_distinctive_features=max_num_of_distinctive_features,
+                accessories_chance=accessories_chance,
+                multiple_accessories=multiple_accessories,
+                min_num_of_accessories=min_num_of_accessories,
+                max_num_of_accessories=max_num_of_accessories,
             )
             prompts.append(prompt)
             metadata_list.append(metadata)
@@ -252,13 +366,31 @@ def generate_diverse_face_prompts(count, ensure_diversity=False):
         # If we need more prompts than our distribution plan
         remaining = count - len(distribution)
         for _ in range(remaining):
-            prompt, metadata = generate_face_prompt()
+            prompt, metadata = generate_face_prompt(
+                distinctive_features_chance=distinctive_features_chance,
+                multiple_distinctive_features=multiple_distinctive_features,
+                min_num_of_distinctive_features=min_num_of_distinctive_features,
+                max_num_of_distinctive_features=max_num_of_distinctive_features,
+                accessories_chance=accessories_chance,
+                multiple_accessories=multiple_accessories,
+                min_num_of_accessories=min_num_of_accessories,
+                max_num_of_accessories=max_num_of_accessories,
+            )
             prompts.append(prompt)
             metadata_list.append(metadata)
     else:
         # Simple random generation
         for _ in range(count):
-            prompt, metadata = generate_face_prompt()
+            prompt, metadata = generate_face_prompt(
+                distinctive_features_chance=distinctive_features_chance,
+                multiple_distinctive_features=multiple_distinctive_features,
+                min_num_of_distinctive_features=min_num_of_distinctive_features,
+                max_num_of_distinctive_features=max_num_of_distinctive_features,
+                accessories_chance=accessories_chance,
+                multiple_accessories=multiple_accessories,
+                min_num_of_accessories=min_num_of_accessories,
+                max_num_of_accessories=max_num_of_accessories,
+            )
             prompts.append(prompt)
             metadata_list.append(metadata)
 

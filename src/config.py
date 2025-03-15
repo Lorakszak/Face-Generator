@@ -8,7 +8,7 @@ It also contains the DEFAULT_FLUX_CONFIG as an example configuration for the Flu
 
 GENERATE_DATASET_CONFIG = {
     # Dataset parameters
-    "num_faces": 3,
+    "num_faces": 5,
     "output_dir": "outputs",
     "save_metadata": True,
     # Model parameters
@@ -24,6 +24,15 @@ GENERATE_DATASET_CONFIG = {
     "enable_cpu_offload": True,  # RTX4090 doesn't want to go BRRRRR without quantized model :(
     "enable_vae_slicing": False,
     "enable_vae_tiling": False,
+    # Feature parameters
+    "distinctive_features_chance": 0.15,
+    "multiple_distinctive_features": True,
+    "min_num_of_distinctive_features": 1,
+    "max_num_of_distinctive_features": 2,
+    "accessories_chance": 0.15,
+    "multiple_accessories": False,
+    "min_num_of_accessories": 1,
+    "max_num_of_accessories": 2,
 }
 
 
@@ -40,7 +49,7 @@ REGIONS = [
 ]
 
 # Define distinctive features
-DISTINCTIVE_FEATURES = [
+OLD_DISTINCTIVE_FEATURES = [
     "freckles",
     "dimples",
     "wrinkles",
@@ -59,7 +68,24 @@ DISTINCTIVE_FEATURES = [
     "strong jawline",
     "large ears",
     "crooked nose",
+    "cute large beautiful eyes",
+    "tongue out",
+    "Heterochromia (different colored eyes)",
+    "Unibrow",
+    "Rosacea (reddened cheeks)",
+    "Facial asymmetry",
+    "dreadlocks",
+    "braids",
+    "ginger/red hair",
+    "emo subculture stylization",
+    "blonde hair",
+    "long hair",
+    "extremely curly hair",
+    "luxurious person",
+    "poor person",
 ]
+
+DISTINCTIVE_FEATURES = []
 
 # Define accessories
 ACCESSORIES = [
@@ -80,6 +106,7 @@ ACCESSORIES = [
     "baseball cap",
     "beanie",
     "headphones",
+    "earphones",
     "hair clips",
     "bandana",
     "tie",

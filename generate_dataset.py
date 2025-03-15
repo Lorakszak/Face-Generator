@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # Generate diverse face prompts
     print(f"Generating {CONFIG['num_faces']} diverse face prompts...")
     prompts, metadata_list = generate_diverse_face_prompts(
-        CONFIG["num_faces"], ensure_diversity=True
+        CONFIG["num_faces"], ensure_diversity=False
     )
 
     # Set up seed if provided
